@@ -6,6 +6,9 @@
 ## datasets (train or test)...it is passed the base directory, "train" or
 ## "test" as 'set', and the column labels vector.  There are some complex paste 
 ## instructions here that build the file names and paths based on the set.
+
+library(plyr)
+
 process.subset <- function(dir, set, col.labels) {
 	xfn = paste(dir,set,paste("X_",set,".txt",sep=""),sep="/")
 	cat(paste("...loading X values from:",xfn,"\n"))
@@ -60,9 +63,22 @@ build.master <- function(dir) {
 	return(master)
 }
 
-## Build a tidy subset of the data based on the assignment.
+## Build a tidy subset of the data based on the assignment.  This calculates the
+## mean values for each  variable, grouped by subject then activity.
 tidy.set <- function(master) {
-	return(master)
+	## Get a list of the observed variables in the master dataframe.
+	obs <- grep("(mean|std)",colnames(master))
+
+	## Group by the subject and activity.label, applying the mean to the observations
+	cat("...generating summary data frame...\n")
+	output <- aggregate(master[obs]
+	                   ,list(subject=master$subject,activity=master$activity.label)
+					   ,mean)
+	
+	cat("...sorting by subject, then activity...\n")
+	output <- arrange(output, subject, activity)
+	
+	return(output)
 }
 
 ## Prompt the user for the correct directory containing the input dataset.
@@ -74,7 +90,7 @@ if(dir == "") dir = default_dir
 cat("\nBuilding the Master Dataset...\n")
 master <- build.master(dir)
 
-cat("\n\nBuilding the tidy subset...")
+cat("\n\nBuilding the tidy subset...\n")
 output <- tidy.set(master)
 
 ## Display some basic diagnostic output about the returned data frame. 
