@@ -4,10 +4,9 @@
 
 ## process_subset performs the work of loading and normalizing one of the 
 ## datasets (train or test)...it is passed the base directory, "train" or
-## "test" as 'set', the column labels vector and the vector of columns to
-## be retained.  There are some complex paste instructions here that build
-## the file names and paths based on the set.
-process_subset <- function(dir, set, col.labels, col.retain) {
+## "test" as 'set', and the column labels vector.  There are some complex paste 
+## instructions here that build the file names and paths based on the set.
+process.subset <- function(dir, set, col.labels) {
 	xfn = paste(dir,set,paste("X_",set,".txt",sep=""),sep="/")
 	cat(paste("...loading X values from:",xfn,"\n"))
 	dataset <- read.table(xfn, col.names=col.labels)
@@ -22,36 +21,33 @@ process_subset <- function(dir, set, col.labels, col.retain) {
 	s <- read.table(sfn)
 	dataset$subject <- s[[1]]
 	
+	## Use a regular expression to limit the retained columns to only
+	## the mean and standard deviation observations (per project).
+	col.retain <- grep("(mean|std|activity|subject)",colnames(dataset))
+	
 	return(dataset[col.retain])
 } 
 
-## analysis_func controls the flow of the analysis.  It is passed the directory
-## containing the unzipped UCI HAR Dataset files and returns a data frame 
-## containing a reduced tidy dataset for further analysis.
-
-analysis_func <- function(dir) {
+## build.master loads the master combined dataset.  It is passed the directory
+## containing the unzipped UCI HAR Dataset files.
+build.master <- function(dir) {
 	## First load the features.txt which contains the labels for the
 	## data columns in  the X_train/test files.
 	cat("...loading column labels...\n")
 	features <- read.table(paste(dir,"features.txt",sep="/"))
-
-	## Use a regular expression to limit the retained columns to only
-	## the mean and standard deviation observations (per project).
-	col.retain <- grep("(mean|std\\(\\))",features[[2]])
-	
-	## Add activity and subject back to the columns.
-	col.retain = c(col.retain, 562, 563)
 	
 	cat("...loading activity labels...\n")
 	activity_labels <- read.table(paste(dir,"activity_labels.txt",sep="/"))
 
 	## Load train data
     cat("...loading train values...\n")
-    train  <- process_subset(dir,"train",features[[2]],col.retain)
+    train  <- process.subset(dir,"train",features[[2]])
+	#print(str(train))
 	
 	## Load test data
     cat("...loading test values...\n")
-    test  <- process_subset(dir,"test",features[[2]],col.retain)
+    test  <- process.subset(dir,"test",features[[2]])
+	#print(str(test))
 	
 	## Combine the test and training datasets.
 	cat("...combining test and train datasets...\n")
@@ -64,16 +60,22 @@ analysis_func <- function(dir) {
 	return(master)
 }
 
-## Prompt the user for the correct directory containing the input dataset.
-default_dir <- "UCI HAR Dataset"
-dir <- readline("Enter Dataset directory [Enter for 'UCI HAR Dataset'] => ")
+## Build a tidy subset of the data based on the assignment.
+tidy.set <- function(master) {
+	return(master)
+}
 
+## Prompt the user for the correct directory containing the input dataset.
+default_dir <- "../UCI HAR Dataset"
+dir <- readline("Enter Dataset directory [Enter for '../UCI HAR Dataset'] => ")
 ## Default if the user hits return with no input.
 if(dir == "") dir = default_dir
 
-## Call the analysis_func
-cat("\nRunning analysis...\n")
-output <- analysis_func(dir)
+cat("\nBuilding the Master Dataset...\n")
+master <- build.master(dir)
+
+cat("\n\nBuilding the tidy subset...")
+output <- tidy.set(master)
 
 ## Display some basic diagnostic output about the returned data frame. 
 cat("data reduction complete:\n\n")
